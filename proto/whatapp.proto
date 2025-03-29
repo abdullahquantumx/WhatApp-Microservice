@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package whatsapp;
+
+option go_package = "github.com/your-org/whatsapp-microservice/proto";
+
+service WhatsAppService {
+  // SendTemplateMessage sends a template-based WhatsApp message
+  rpc SendTemplateMessage(SendTemplateMessageRequest) returns (SendTemplateMessageResponse) {}
+  
+  // GetMessage retrieves a message by ID
+  rpc GetMessage(GetMessageRequest) returns (MessageResponse) {}
+  
+  // ListMessages retrieves a list of messages with filtering options
+  rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse) {}
+}
+
+// SendTemplateMessageRequest contains parameters for sending a template message
+message SendTemplateMessageRequest {
+  string phone_number = 1;  // Phone number of the recipient (with or without WhatsApp prefix)
+  string template_id = 2;   // ID of the template to use
+  map<string, string> parameters = 3;  // Template parameters
+  string order_id = 4;      // Optional: Order ID for tracking
+  string customer_id = 5;   // Optional: Customer ID for tracking
+}
+
+// SendTemplateMessageResponse contains the result of sending a template message
+message SendTemplateMessageResponse {
+  int64 message_id = 1;     // Internal message ID
+  string status = 2;        // Status of the message (queued, sending, sent, delivered, read, failed)
+  string external_id = 3;   // External ID from the WhatsApp provider (if available)
+}
+
+// GetMessageRequest contains parameters for retrieving a message
+message GetMessageRequest {
+  int64 message_id = 1;     // Internal message ID
+}
+
+// MessageResponse contains details of a message
+message MessageResponse {
+  int64 id = 1;            // Internal message ID
+  string phone_number = 2;  // Phone number of the recipient
+  string template_id = 3;   // ID of the template used
+  map<string, string> parameters = 4;  // Template parameters
+  string order_id = 5;      // Order ID for tracking
+  string customer_id = 6;   // Customer ID for tracking
+  string status = 7;        // Status of the message
+  string error_message = 8; // Error message (if any)
+  string external_id = 9;   // External ID from the WhatsApp provider
+  string created_at = 10;   // Creation timestamp in RFC3339 format
+  string updated_at = 11;   // Last update timestamp in RFC3339 format
+}
+
+// ListMessagesRequest contains parameters for listing messages
+message ListMessagesRequest {
+  string order_id = 1;      // Optional: Filter by order ID
+  string customer_id = 2;   // Optional: Filter by customer ID
+  string phone_number = 3;  // Optional: Filter by phone number
+  int32 limit = 4;          // Maximum number of records to return
+  int32 offset = 5;         // Offset for pagination
+}
+
+// ListMessagesResponse contains a list of messages
+message ListMessagesResponse {
+  repeated MessageResponse messages = 1;  // List of messages
+  int32 total_count = 2;                 // Total number of messages matching the filters
+}
+
+// WebhookRequest contains data about a webhook event from WhatsApp provider
+message WebhookRequest {
+  string external_id = 1;    // External message ID
+  string status = 2;         // New status of the message
+  string error_code = 3;     // Error code (if applicable)
+  string error_message = 4;  // Error message (if applicable)
+}
+
+// WebhookResponse contains the result of processing a webhook
+message WebhookResponse {
+  bool success = 1;         // Whether the webhook was processed successfully
+  string message = 2;       // Additional information
+}
