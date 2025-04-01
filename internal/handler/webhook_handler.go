@@ -4,11 +4,12 @@ package handler
 import (
 	"io/ioutil"
 	"net/http"
+	"context"
 
 	"github.com/gin-gonic/gin"
-	"github.com/your-org/whatsapp-microservice/internal/service"
-	"github.com/your-org/whatsapp-microservice/pkg/utils"
-	pb "github.com/your-org/whatsapp-microservice/proto"
+	"messaging-microservice/internal/service"
+	"messaging-microservice/pkg/utils"
+	pb "messaging-microservice/proto"
 )
 
 // WebhookHandler handles webhook callbacks from WhatsApp
@@ -27,6 +28,12 @@ func NewWebhookHandler(webhookService service.WebhookService, logger utils.Logge
 
 // HandleWebhook processes incoming webhook events from WhatsApp
 func (h *WebhookHandler) HandleWebhook(c *gin.Context) {
+	// Check if this is a verification request from Meta
+	if c.Query("hub.mode") == "subscribe" && c.Query("hub.verify_token") != "" {
+		h.handleVerification(c)
+		return
+	}
+
 	// Read the raw body
 	body, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
@@ -35,9 +42,9 @@ func (h *WebhookHandler) HandleWebhook(c *gin.Context) {
 		return
 	}
 
-	// Validate webhook signature if needed
-	// For Twilio, signature is in X-Twilio-Signature header
-	signature := c.GetHeader("X-Twilio-Signature")
+	// Validate webhook signature
+	// For Meta, signature is in X-Hub-Signature-256 header
+	signature := c.GetHeader("X-Hub-Signature-256")
 	
 	// Process the webhook
 	if err := h.webhookService.ProcessWebhook(c.Request.Context(), body, signature, c.Request.URL.String()); err != nil {
@@ -50,8 +57,30 @@ func (h *WebhookHandler) HandleWebhook(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-// Also add gRPC webhook handler if needed
-// This could be used by internal services to programmatically trigger webhook-like events
+// handleVerification handles the webhook verification request from Meta
+func (h *WebhookHandler) handleVerification(c *gin.Context) {
+	mode := c.Query("hub.mode")
+	token := c.Query("hub.verify_token")
+	challenge := c.Query("hub.challenge")
+
+	if mode != "subscribe" || token == "" {
+		h.logger.Error("Invalid verification request", "mode", mode, "token", token)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid verification request"})
+		return
+	}
+
+	// Verify the token against your configured verify token
+	// This should be loaded from your configuration
+	verifyToken := h.webhookService.GetVerifyToken()
+	if token != verifyToken {
+		h.logger.Error("Invalid verify token", "received", token, "expected", verifyToken)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid verify token"})
+		return
+	}
+
+	// If verification succeeds, respond with the challenge
+	c.String(http.StatusOK, challenge)
+}
 
 // HandleGrpcWebhook handles webhook events coming through gRPC
 func (h *WebhookHandler) HandleGrpcWebhook(ctx context.Context, req *pb.WebhookRequest) (*pb.WebhookResponse, error) {

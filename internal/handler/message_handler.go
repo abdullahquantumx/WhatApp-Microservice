@@ -8,9 +8,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/your-org/whatsapp-microservice/internal/service"
-	"github.com/your-org/whatsapp-microservice/pkg/utils"
-	pb "github.com/your-org/whatsapp-microservice/proto"
+	"messaging-microservice/internal/domain"
+	"messaging-microservice/internal/service"
+	"messaging-microservice/pkg/utils"
+	pb "messaging-microservice/proto"
 )
 
 // GrpcMessageHandler handles gRPC requests for WhatsApp messages
@@ -108,8 +109,8 @@ func (h *GrpcMessageHandler) ListMessages(ctx context.Context, req *pb.ListMessa
 	return resp, nil
 }
 
-// Helper function to convert a service.Message to pb.MessageResponse
-func convertMessageToProto(msg *service.Message) *pb.MessageResponse {
+// Helper function to convert a domain.Message to pb.MessageResponse
+func convertMessageToProto(msg *domain.Message) *pb.MessageResponse {
 	// Convert parameters from map[string]interface{} to map[string]string
 	parameters := make(map[string]string)
 	for key, value := range msg.Parameters {

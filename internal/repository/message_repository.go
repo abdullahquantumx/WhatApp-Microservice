@@ -9,7 +9,8 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/your-org/whatsapp-microservice/pkg/utils"
+	"messaging-microservice/internal/domain"
+	"messaging-microservice/pkg/utils"
 )
 
 // MessageModel represents a message in the database
@@ -27,27 +28,12 @@ type MessageModel struct {
 	UpdatedAt    time.Time      `db:"updated_at"`
 }
 
-// Message represents a WhatsApp message
-type Message struct {
-	ID           int64                  `json:"id"`
-	PhoneNumber  string                 `json:"phone_number"`
-	TemplateID   string                 `json:"template_id"`
-	Parameters   map[string]interface{} `json:"parameters"`
-	OrderID      string                 `json:"order_id"`
-	CustomerID   string                 `json:"customer_id"`
-	Status       string                 `json:"status"`
-	ErrorMessage string                 `json:"error_message,omitempty"`
-	ExternalID   string                 `json:"external_id,omitempty"`
-	CreatedAt    time.Time              `json:"created_at"`
-	UpdatedAt    time.Time              `json:"updated_at"`
-}
-
 // MessageRepository defines the interface for database operations
 type MessageRepository interface {
-	CreateMessage(ctx context.Context, message *Message) (int64, error)
-	GetMessageByID(ctx context.Context, id int64) (*Message, error)
-	GetMessageByExternalID(ctx context.Context, externalID string) (*Message, error)
-	ListMessages(ctx context.Context, orderID, customerID, phoneNumber string, limit, offset int) ([]*Message, error)
+	CreateMessage(ctx context.Context, message *domain.Message) (int64, error)
+	GetMessageByID(ctx context.Context, id int64) (*domain.Message, error)
+	GetMessageByExternalID(ctx context.Context, externalID string) (*domain.Message, error)
+	ListMessages(ctx context.Context, orderID, customerID, phoneNumber string, limit, offset int) ([]*domain.Message, error)
 	UpdateMessageStatus(ctx context.Context, id int64, status, errorMessage, externalID string) error
 }
 
@@ -66,7 +52,7 @@ func NewMessageRepository(db *sqlx.DB, logger utils.Logger) MessageRepository {
 }
 
 // CreateMessage creates a new message
-func (r *messageRepository) CreateMessage(ctx context.Context, message *Message) (int64, error) {
+func (r *messageRepository) CreateMessage(ctx context.Context, message *domain.Message) (int64, error) {
 	// Convert parameters to JSON
 	paramsJSON, err := json.Marshal(message.Parameters)
 	if err != nil {
@@ -129,7 +115,7 @@ func (r *messageRepository) CreateMessage(ctx context.Context, message *Message)
 }
 
 // GetMessageByID retrieves a message by ID
-func (r *messageRepository) GetMessageByID(ctx context.Context, id int64) (*Message, error) {
+func (r *messageRepository) GetMessageByID(ctx context.Context, id int64) (*domain.Message, error) {
 	query := `
 		SELECT id, phone_number, template_id, parameters, 
 			order_id, customer_id, status, 
@@ -146,12 +132,12 @@ func (r *messageRepository) GetMessageByID(ctx context.Context, id int64) (*Mess
 		return nil, err
 	}
 
-	// Convert to Message
-	return modelToMessage(&model)
+	// Convert to domain.Message
+	return modelToDomainMessage(&model)
 }
 
 // GetMessageByExternalID retrieves a message by external ID
-func (r *messageRepository) GetMessageByExternalID(ctx context.Context, externalID string) (*Message, error) {
+func (r *messageRepository) GetMessageByExternalID(ctx context.Context, externalID string) (*domain.Message, error) {
 	query := `
 		SELECT id, phone_number, template_id, parameters, 
 			order_id, customer_id, status, 
@@ -168,12 +154,12 @@ func (r *messageRepository) GetMessageByExternalID(ctx context.Context, external
 		return nil, err
 	}
 
-	// Convert to Message
-	return modelToMessage(&model)
+	// Convert to domain.Message
+	return modelToDomainMessage(&model)
 }
 
 // ListMessages retrieves a list of messages
-func (r *messageRepository) ListMessages(ctx context.Context, orderID, customerID, phoneNumber string, limit, offset int) ([]*Message, error) {
+func (r *messageRepository) ListMessages(ctx context.Context, orderID, customerID, phoneNumber string, limit, offset int) ([]*domain.Message, error) {
 	// Build query
 	query := `
 		SELECT id, phone_number, template_id, parameters, 
@@ -215,10 +201,10 @@ func (r *messageRepository) ListMessages(ctx context.Context, orderID, customerI
 		return nil, err
 	}
 
-	// Convert to Messages
-	messages := make([]*Message, 0, len(models))
+	// Convert to domain.Messages
+	messages := make([]*domain.Message, 0, len(models))
 	for _, model := range models {
-		msg, err := modelToMessage(&model)
+		msg, err := modelToDomainMessage(&model)
 		if err != nil {
 			r.logger.Error("Failed to convert model to message", "error", err)
 			continue
@@ -261,16 +247,16 @@ func (r *messageRepository) UpdateMessageStatus(ctx context.Context, id int64, s
 	return err
 }
 
-// Helper function to convert model to message
-func modelToMessage(model *MessageModel) (*Message, error) {
+// Helper function to convert model to domain message
+func modelToDomainMessage(model *MessageModel) (*domain.Message, error) {
 	// Parse parameters JSON
 	var parameters map[string]interface{}
 	if err := json.Unmarshal([]byte(model.Parameters), &parameters); err != nil {
 		return nil, err
 	}
 
-	// Create message
-	message := &Message{
+	// Create domain message
+	message := &domain.Message{
 		ID:          model.ID,
 		PhoneNumber: model.PhoneNumber,
 		TemplateID:  model.TemplateID,

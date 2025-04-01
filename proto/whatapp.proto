@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package whatsapp;
 
-option go_package = "github.com/your-org/whatsapp-microservice/proto";
+option go_package = "proto/";
 
 service WhatsAppService {
   // SendTemplateMessage sends a template-based WhatsApp message

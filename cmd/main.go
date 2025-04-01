@@ -4,7 +4,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -18,14 +17,14 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/your-org/whatsapp-microservice/config"
-	"github.com/your-org/whatsapp-microservice/internal/handler"
-	"github.com/your-org/whatsapp-microservice/internal/queue"
-	"github.com/your-org/whatsapp-microservice/internal/repository"
-	"github.com/your-org/whatsapp-microservice/internal/service"
-	"github.com/your-org/whatsapp-microservice/pkg/twilio"
-	"github.com/your-org/whatsapp-microservice/pkg/utils"
-	pb "github.com/your-org/whatsapp-microservice/proto"
+	"messaging-microservice/config"
+	"messaging-microservice/internal/handler"
+	"messaging-microservice/internal/queue"
+	"messaging-microservice/internal/repository"
+	"messaging-microservice/internal/service"
+	"messaging-microservice/pkg/meta"
+	"messaging-microservice/pkg/utils"
+	pb "messaging-microservice/proto"
 )
 
 func main() {
@@ -49,8 +48,8 @@ func main() {
 	// Initialize repository
 	messageRepo := repository.NewMessageRepository(db, logger)
 
-	// Initialize WhatsApp client
-	whatsappClient := twilio.NewClient(cfg.TwilioAccountSID, cfg.TwilioAuthToken, cfg.TwilioFromNumber, logger)
+	// Initialize WhatsApp client (now using Meta)
+	whatsappClient := meta.NewClient(cfg.MetaPhoneNumberID, cfg.MetaAccessToken, cfg.MetaAppSecret, logger)
 
 	// Initialize message queue
 	messageProducer, err := queue.NewProducer(cfg.KafkaBrokers, cfg.KafkaTopic, logger)
@@ -67,7 +66,7 @@ func main() {
 
 	// Initialize services
 	messageService := service.NewMessageService(messageRepo, whatsappClient, messageProducer, logger)
-	webhookService := service.NewWebhookService(messageRepo, messageProducer, logger)
+	webhookService := service.NewWebhookService(messageRepo, messageProducer, logger, cfg.MetaVerifyToken)
 
 	// Start consumer
 	go func() {
@@ -148,4 +147,6 @@ func main() {
 	}
 
 	logger.Info("Server exited gracefully")
+
+
 }

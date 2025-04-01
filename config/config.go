@@ -15,7 +15,7 @@ import (
 type Config struct {
 	// Server configuration
 	HTTPPort        string
-	GRPCPort        string         // Added for gRPC
+	GRPCPort        string
 	Environment     string
 	ReadTimeout     time.Duration
 	WriteTimeout    time.Duration
@@ -26,10 +26,11 @@ type Config struct {
 	DatabaseMaxOpenConns int
 	DatabaseMaxIdleConns int
 
-	// Twilio WhatsApp configuration
-	TwilioAccountSID string
-	TwilioAuthToken  string
-	TwilioFromNumber string
+	// Meta WhatsApp configuration
+	MetaPhoneNumberID string
+	MetaAccessToken   string
+	MetaAppSecret     string
+	MetaVerifyToken   string
 
 	// Kafka configuration
 	KafkaBrokers []string
@@ -55,7 +56,7 @@ func Load() (*Config, error) {
 
 	cfg := &Config{
 		HTTPPort:        getEnv("HTTP_PORT", "8080"),
-		GRPCPort:        getEnv("GRPC_PORT", "9090"),  // Added for gRPC
+		GRPCPort:        getEnv("GRPC_PORT", "9090"),
 		Environment:     getEnv("ENVIRONMENT", "development"),
 		ReadTimeout:     getEnvAsDuration("READ_TIMEOUT", 5*time.Second),
 		WriteTimeout:    getEnvAsDuration("WRITE_TIMEOUT", 10*time.Second),
@@ -65,9 +66,10 @@ func Load() (*Config, error) {
 		DatabaseMaxOpenConns: getEnvAsInt("DATABASE_MAX_OPEN_CONNS", 20),
 		DatabaseMaxIdleConns: getEnvAsInt("DATABASE_MAX_IDLE_CONNS", 5),
 
-		TwilioAccountSID: getEnv("TWILIO_ACCOUNT_SID", ""),
-		TwilioAuthToken:  getEnv("TWILIO_AUTH_TOKEN", ""),
-		TwilioFromNumber: getEnv("TWILIO_FROM_NUMBER", ""),
+		MetaPhoneNumberID: getEnv("META_PHONE_NUMBER_ID", ""),
+		MetaAccessToken:   getEnv("META_ACCESS_TOKEN", ""),
+		MetaAppSecret:     getEnv("META_APP_SECRET", ""),
+		MetaVerifyToken:   getEnv("META_VERIFY_TOKEN", ""),
 
 		KafkaBrokers: strings.Split(getEnv("KAFKA_BROKERS", "localhost:9092"), ","),
 		KafkaTopic:   getEnv("KAFKA_TOPIC", "whatsapp-messages"),
@@ -88,14 +90,14 @@ func Load() (*Config, error) {
 		return nil, errors.New("DATABASE_URL is required")
 	}
 
-	if cfg.TwilioAccountSID == "" || cfg.TwilioAuthToken == "" || cfg.TwilioFromNumber == "" {
-		return nil, errors.New("TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER are required")
+	if cfg.MetaPhoneNumberID == "" || cfg.MetaAccessToken == "" {
+		return nil, errors.New("META_PHONE_NUMBER_ID and META_ACCESS_TOKEN are required")
 	}
 
 	return cfg, nil
 }
 
-// Helper functions to read environment variables (unchanged)
+// Helper functions to read environment variables
 func getEnv(key, defaultValue string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value

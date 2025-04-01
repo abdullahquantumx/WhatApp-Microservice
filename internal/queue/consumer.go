@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/segmentio/kafka-go"
-	"github.com/your-org/whatsapp-microservice/pkg/utils"
+	"messaging-microservice/pkg/utils"
 )
 
 // MessageHandler is a function to handle consumed messages

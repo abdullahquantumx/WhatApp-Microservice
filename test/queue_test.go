@@ -9,8 +9,8 @@ import (
 	"github.com/segmentio/kafka-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/your-org/whatsapp-microservice/internal/queue"
-	"github.com/your-org/whatsapp-microservice/pkg/utils"
+	"messaging-microservice/internal/queue"
+	"messaging-microservice/pkg/utils"
 )
 
 // Mock logger for queue tests

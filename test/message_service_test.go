@@ -5,13 +5,14 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
+	// "time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/your-org/whatsapp-microservice/internal/service"
-	"github.com/your-org/whatsapp-microservice/pkg/twilio"
-	"github.com/your-org/whatsapp-microservice/pkg/utils"
+	"messaging-microservice/internal/domain"
+	"messaging-microservice/internal/service"
+	"messaging-microservice/pkg/meta"
+	// "messaging-microservice/pkg/utils"
 )
 
 // Mock repositories and clients
@@ -19,30 +20,30 @@ type MockMessageRepository struct {
 	mock.Mock
 }
 
-func (m *MockMessageRepository) CreateMessage(ctx context.Context, message *service.Message) (int64, error) {
+func (m *MockMessageRepository) CreateMessage(ctx context.Context, message *domain.Message) (int64, error) {
 	args := m.Called(ctx, message)
 	return int64(args.Int(0)), args.Error(1)
 }
 
-func (m *MockMessageRepository) GetMessageByID(ctx context.Context, id int64) (*service.Message, error) {
+func (m *MockMessageRepository) GetMessageByID(ctx context.Context, id int64) (*domain.Message, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*service.Message), args.Error(1)
+	return args.Get(0).(*domain.Message), args.Error(1)
 }
 
-func (m *MockMessageRepository) GetMessageByExternalID(ctx context.Context, externalID string) (*service.Message, error) {
+func (m *MockMessageRepository) GetMessageByExternalID(ctx context.Context, externalID string) (*domain.Message, error) {
 	args := m.Called(ctx, externalID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*service.Message), args.Error(1)
+	return args.Get(0).(*domain.Message), args.Error(1)
 }
 
-func (m *MockMessageRepository) ListMessages(ctx context.Context, orderID, customerID, phoneNumber string, limit, offset int) ([]*service.Message, error) {
+func (m *MockMessageRepository) ListMessages(ctx context.Context, orderID, customerID, phoneNumber string, limit, offset int) ([]*domain.Message, error) {
 	args := m.Called(ctx, orderID, customerID, phoneNumber, limit, offset)
-	return args.Get(0).([]*service.Message), args.Error(1)
+	return args.Get(0).([]*domain.Message), args.Error(1)
 }
 
 func (m *MockMessageRepository) UpdateMessageStatus(ctx context.Context, id int64, status, errorMessage, externalID string) error {
@@ -54,12 +55,12 @@ type MockWhatsAppClient struct {
 	mock.Mock
 }
 
-func (m *MockWhatsAppClient) SendTemplateMessage(ctx context.Context, to, templateName string, parameters map[string]interface{}) (*twilio.MessageResponse, error) {
+func (m *MockWhatsAppClient) SendTemplateMessage(ctx context.Context, to, templateName string, parameters map[string]interface{}) (*meta.MessageResponse, error) {
 	args := m.Called(ctx, to, templateName, parameters)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*twilio.MessageResponse), args.Error(1)
+	return args.Get(0).(*meta.MessageResponse), args.Error(1)
 }
 
 func (m *MockWhatsAppClient) ValidateWebhookSignature(signatureHeader, url string, body []byte) bool {
@@ -124,8 +125,8 @@ func TestSendTemplateMessage(t *testing.T) {
 	customerID := "CUST-6789"
 
 	// Set up mock expectations
-	mockRepo.On("CreateMessage", mock.Anything, mock.MatchedBy(func(m *service.Message) bool {
-		return m.PhoneNumber == "whatsapp:+1234567890" && m.TemplateID == templateID
+	mockRepo.On("CreateMessage", mock.Anything, mock.MatchedBy(func(m *domain.Message) bool {
+		return m.PhoneNumber == phoneNumber && m.TemplateID == templateID
 	})).Return(1, nil)
 
 	mockProducer.On("Produce", mock.Anything, mock.Anything).Return(nil)
@@ -145,7 +146,7 @@ func TestSendTemplateMessage(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, msg)
 	assert.Equal(t, int64(1), msg.ID)
-	assert.Equal(t, "whatsapp:+1234567890", msg.PhoneNumber)
+	assert.Equal(t, phoneNumber, msg.PhoneNumber)
 	assert.Equal(t, templateID, msg.TemplateID)
 	assert.Equal(t, "queued", msg.Status)
 
